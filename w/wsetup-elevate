@@ -1,0 +1,35 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-elevate -i
+##:
+. wcompat
+wsetup_elevate() {
+    local u="https://code.kliu.org/misc/elevate/elevate-1.3.0-redist.7z"
+    local p="$(pwd)"
+    wcompat chkadmin
+    if test ! -e "${w}/elevate.exe"; then
+        wcompat fetch-INS "$u"
+        cd "${WBINDIR}"
+        case "$(uname -m)" in
+            x86_64) 7z e -y "${INS}" 'bin.x86-64/elevate.exe' ;;
+            *)      7z e -y "${INS}" 'bin.x86-32/elevate.exe' ;;
+        esac
+        cd "${p}"
+    fi
+    wcompat wrapper elevate-sh <<-EOF
+	#!/bin/sh -e
+	elevate busybox sh -e -c "
+	    (
+	    \$*
+	    ) || true
+	    echo 'Type enter'
+	    read ign
+	    "
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-elevate"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_elevate "$@"; exit 0       ;;
+    esac
+fi

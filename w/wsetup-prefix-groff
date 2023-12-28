@@ -1,0 +1,44 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-prefix-groff -i
+##:
+wsetup_prefix_groff() {
+    local idir="C:/usr"
+    local url="http://downloads.sourceforge.net/gnuwin32/groff-1.20.1-bin.zip"
+    local zip="${DDIR:-${TEMP:-/tmp}}/$(basename "${url}")"
+
+    ## Require admin permissions.
+    if test ! -w C:/Windows/System32; then
+        echo >&2 "error: Execute this as administrator."
+        return 1
+    fi
+
+    ## Install nroff.
+    if test ! -e "${idir}/bin/nroff"; then
+        if test ! -e "${zip}"; then
+            wget -O "${zip}.tmp" "${url}"
+            mv -v "${zip}.tmp" "${zip}"
+        fi
+        echo "Installing groff to '${idir}' ..."
+        mkdir -p "${idir}"
+        unzip -o "${zip}" -d "${idir}"
+    fi
+    
+    ## Install wrapper.
+    cat > C:/Windows/System32/nroff <<-EOF
+	#!/bin/sh -e
+	export PATH="C:/usr/bin;\${PATH}"
+	C:/usr/bin/nroff -c -Tascii "\$@"
+	EOF
+    cat > C:/Windows/System32/tbl <<-EOF
+	#!/bin/sh -e
+	export PATH="C:/usr/bin;\${PATH}"
+	C:/usr/bin/tbl.exe "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-prefix-groff"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0"   ;;
+        -*i*)         wsetup_prefix_groff "$@"; exit 0 ;;
+    esac
+fi

@@ -1,0 +1,31 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-prefix-manpages -i
+#h:
+#h: Install POSIX 0,1,3 manpages to "C:/usr/share/man".
+##:
+wsetup_prefix_manpages() {
+    local mandir="C:/usr/share/man" profdir="C:/etc/profile.d"
+    local url="http://deb.debian.org/debian/pool/non-free/m/manpages-posix/manpages-posix_2013a.orig.tar.xz"
+    local tar="${DDIR:-${TEMP:-/tmp}}/$(basename "${url}")"
+    if test ! -e "${tar}"; then
+        wget -O "${tar}.tmp" "${url}"
+        mv -v "${tar}.tmp" "${tar}"
+    fi
+    echo "Installing POSIX manpages to ${mandir} ..."
+    mkdir -p "${mandir}"
+    tar xf "${tar}" -C "${mandir}" --strip-components 1 --overwrite --no-same-permissions \
+        "man-pages-posix-2013-a/man0p" \
+        "man-pages-posix-2013-a/man1p" \
+        "man-pages-posix-2013-a/man3p"
+    mkdir -p "${profdir}"
+    cat > "${profdir}/MANPATH.sh" <<-EOF
+	export MANPATH="C:/usr/share/man"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-prefix-manpages"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0"   ;;
+        -*i*)         wsetup_prefix_manpages "$@"; exit 0 ;;
+    esac
+fi

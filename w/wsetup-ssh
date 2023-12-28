@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-ssh -i (Requires admin)
+##:
+. wcompat
+wsetup_ssh() {
+    local u i d n
+    case "$(uname -m)" in
+        x86_64) d="OpenSSH-Win64" u="https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip";;
+        *)      d="OpenSSH-Win32" u="https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip";;
+    esac
+    wcompat chkadmin
+    if test ! -e "$PF/OpenSSH-Win64/ssh.exe"; then
+        wcompat fetch-INS "$u"
+        unzip -o "$INS" -d "$PF"
+    fi
+    for n in ssh scp sftp ssh-keygen; do
+        wcompat wrapper "$n" <<-EOF
+	#!/bin/sh -e
+	'$PF/$d/$n.exe' "\$@"
+	EOF
+    done
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-ssh";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_ssh "$@"; exit 0;;
+    esac
+fi

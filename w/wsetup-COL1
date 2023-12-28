@@ -1,0 +1,37 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-base -i
+#h:
+#h: Install a collection of utilities in a windows machine.
+##:
+. wsetup-prefix # x
+. wsetup-prefix-groff # x
+. wsetup-prefix-manpages # x
+. wsetup-7z # x
+. wsetup-dialog # x
+. wsetup-elevate # x
+. wsetup-farmanager # x
+. wsetup-git # x
+. wsetup-nircmd # x
+. wsetup-ssh # x
+. wsetup-python312
+wsetup_COL1() {
+    wsetup_prefix
+    wsetup_prefix_groff
+    wsetup_prefix_manpages
+    wsetup_7z
+    wsetup_dialog
+    wsetup_elevate
+    wsetup_farmanager
+    wsetup_git
+    wsetup_nircmd
+    wsetup_ssh
+    wsetup_python312
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-COL1";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_COL1; exit 0;;
+    esac
+fi

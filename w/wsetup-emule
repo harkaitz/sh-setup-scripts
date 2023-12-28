@@ -1,0 +1,25 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-emule -i
+##:
+. wcompat
+wsetup_emule() {
+    local u="https://www.emule-project.net/files/emule/eMule0.60c.zip"
+    local n="$(basename "${u}" .zip)"
+    local d="C:/opt"
+    if test ! -e "${d}/${n}/emule.exe"; then
+        wcompat fetch-INS "$u"
+        unzip -o "$INS" -d "${d}"
+    fi
+    wcompat wrapper emule <<-EOF
+	#!/bin/sh -e
+	cd '${d}/${n}'
+	'${d}/${n}/emule.exe' "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-emule";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_emule "$@"; exit 0;;
+    esac
+fi

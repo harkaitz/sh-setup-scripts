@@ -1,0 +1,26 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-sylpheed -i
+##:
+. wcompat
+wsetup_sylpheed() {
+    local u="https://sylpheed.sraoss.jp/sylpheed/win32/sylpheed-3.7-win32.zip"
+    local n="Sylpheed-3.7" d='C:\opt'
+    local t="${DDIR:-${TEMP:-/tmp}}/$(basename "${u}")"
+    if test ! -e "${d}/${n}/curl.exe"; then
+        wcompat fetch "${t}" "${u}"
+        unzip "${t}" -d "${d}"
+    fi
+    echo "Creating ${WBINDIR}\\sylpheed ..."
+    cat > "${WBINDIR}\\sylpheed" <<-EOF
+	#!/bin/sh -e
+	explorer "${d}\\${n}\\sylpheed.exe" "\$@"
+	EOF
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-sylpheed";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_sylpheed "$@"; exit 0      ;;
+    esac
+fi

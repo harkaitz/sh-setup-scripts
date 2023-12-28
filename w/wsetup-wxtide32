@@ -1,0 +1,25 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-wxtide32 -i
+##:
+. wcompat
+wsetup_wxtide32() {
+    local u="http://svhorizon.com/wxtide32/wxtdata/wxtide47m.zip"
+    local d="C:/opt/wxtide32"
+    if test ! -e "${d}/wxtide32.exe"; then
+        wcompat fetch-INS "$u"
+        mkdir -p "$d"
+        unzip "$INS" -d "$d"
+    fi
+    wcompat wrapper wxtide32 <<-EOF
+	#!/bin/sh -e
+	cd '${d}'
+	'${d}/wxtide32.exe' "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-wxtide32";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_wxtide32 "$@"; exit 0;;
+    esac
+fi

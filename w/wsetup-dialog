@@ -1,0 +1,21 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-dialog -i
+#h:
+#h: Install "dialog.exe" in System32.
+##:
+. wcompat
+wsetup_dialog() {
+    local u="https://andrear.altervista.org/contents/pc/dialog/dialog-exe-mingw.zip"
+    wcompat chkadmin
+    if test ! -e "$WBINDIR/dialog.exe"; then
+        wcompat fetch-INS "$u"
+        unzip "$INS" -d "$WBINDIR"
+    fi
+}
+if test @"$(basename "$0")" = @"wsetup-dialog";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_dialog "$@"; exit 0        ;;
+    esac
+fi

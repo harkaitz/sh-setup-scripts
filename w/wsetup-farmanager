@@ -1,0 +1,29 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-farmanager -i
+##:
+. wcompat
+wsetup_farmanager() {
+    local u d
+    case "$(uname -m)" in
+        x86_64) u="https://github.com/FarGroup/FarManager/releases/download/ci%2Fv3.0.6171.3400/Far.x64.3.0.6171.3400.b8e8df24eac2ca28242540f216f04fef1500d7be.7z";;
+        *)      u="https://www.farmanager.com/files/Far30b6226.x86.20231214.7z";;
+    esac
+    d="C:/Program Files/Far"
+    wcompat chkadmin
+    if test ! -e "$d/Far.exe"; then
+        wcompat fetch-INS "$u"
+        mkdir -p "${d}"
+        7z x "$INS" -o"${d}"
+    fi
+    wcompat wrapper far <<-EOF
+	#!/bin/sh -e
+	'${d}/Far.exe' "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-farmanager"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_farmanager "$@"; exit 0;;
+    esac
+fi

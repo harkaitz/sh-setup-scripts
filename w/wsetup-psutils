@@ -1,0 +1,18 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-psutils -i
+##:
+. wcompat
+wsetup_psutils() {
+    local u="https://download.sysinternals.com/files/PSTools.zip"
+    if test ! -e "$WBINDIR/PsExec.exe"; then
+        wcompat fetch-INS "$u"
+        unzip -o "$INS" PsExec.exe -d "$WBINDIR"
+    fi
+}
+if test @"$(basename "$0")" = @"wsetup-psutils";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_psutils "$@"; exit 0;;
+    esac
+fi

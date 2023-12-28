@@ -1,0 +1,25 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-microsip -i
+##:
+. wcompat
+wsetup_microsip() {
+    local u="https://www.microsip.org/downloads/?file=MicroSIP-3.19.10.zip"
+    local d="C:\\opt\\microsip"
+    local z="${DDIR:-${TEMP:-/tmp}}/MicroSIP-3.19.10.zip"
+    if test ! -e "${d}/microsip.exe"; then
+        wcompat fetch "$z" "$u"
+        unzip -o "$z" -d "$d"
+    fi
+    wcompat wrapper microsip <<-EOF
+	#!/bin/sh -e
+	cd '${d}'
+	'.\\microsip.exe' "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"wsetup-microsip";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_microsip "$@"; exit 0      ;;
+    esac
+fi
