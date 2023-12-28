@@ -1,0 +1,47 @@
+#!/bin/sh -e
+##:
+#h: Usage: runit-h [-v][-D DESTDIR] ...
+#h:
+#h:   -a NAME PROGRAM ARGS... : Create a normal waiting service.
+#h:
+#h: Create and manage services using runit.
+##:
+runit_h() {
+    local OPTIND optopt ops= SUDO=sudo DESTDIR SERVICE
+    
+    ## Parse command line arguments.
+    while getopts "va:D:" optopt; do
+        ops="${ops}${optopt}"
+        case $optopt in
+            v)  local VERBOSE=y;;
+            D)  DESTDIR="${OPTARG}";;
+            a)  SERVICE="${OPTARG}";;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    if test -n "${DESTDIR}"; then SUDO=; fi
+    
+    ## Operations.
+    case "${ops}" in *a*) runit_add "$@";; esac 
+}
+runit_add() {
+    if test -n "${VERBOSE}"; then
+        echo "Creating ${DESTDIR}/etc/sv/${SERVICE}/run ..."
+    fi
+    ${SUDO} mkdir -p "${DESTDIR}/etc/sv/${SERVICE}"
+    ${SUDO} tee "${DESTDIR}/etc/sv/${SERVICE}/run" <<-EOF >/dev/null
+	#!/bin/sh
+	mkdir -p /var/log
+	echo "[STARTING \$(date)]" >> /var/log/${SERVICE}.log
+	exec $* >> /var/log/${SERVICE}.log 2>&1
+	EOF
+    ${SUDO} chmod +x "${DESTDIR}/etc/sv/${SERVICE}/run"
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"runit-h";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            runit_h "$@"; exit 0;;
+    esac
+fi

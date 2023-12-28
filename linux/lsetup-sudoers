@@ -1,0 +1,38 @@
+#!/bin/sh -e
+##:
+#h: Usage: lsetup-sudoers USER
+#h:
+#h: Allow users to use sudo without a password.
+##:
+lsetup_sudoers() {
+    local cmd="
+    if which sudo >/dev/null 2>&1; then
+        true
+    elif test -f /usr/bin/apt-get; then
+        apt-get -y install sudo
+    else
+        echo >&2 'error: sudo not installed.'
+        exit 1
+    fi
+    "
+    for u in "$@"; do
+        if test @"$u" = @"root"; then
+            continue
+        fi
+        cmd="${cmd}
+        if ! grep '^${u} .*' /etc/sudoers >/dev/null 2>&1; then
+            echo 'Adding ${u} /etc/sudoers ...'
+            echo '${u} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+        else
+            echo 'User '${u}' already in sudoers file.' >&2
+        fi"
+    done
+    su -c "${cmd}"
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"lsetup-sudoers";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            lsetup_sudoers "$@"; exit 0;;
+    esac
+fi

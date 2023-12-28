@@ -1,0 +1,69 @@
+#!/bin/sh -e
+##:
+#h: Usage: systemd-h [-v][-D DESTDIR][-d DESC] ...
+#h:
+#h:   -a NAME PROGRAM ARGS... : Create a normal waiting service.
+#h:
+#h: Create and manage services using runit.
+##:
+systemd_h() {
+    local OPTIND optopt ops= SUDO=sudo DESTDIR SERVICE
+    local DESCRIPTION=
+    
+    ## Parse command line arguments.
+    while getopts "va:D:d:" optopt; do
+        ops="${ops}${optopt}"
+        case $optopt in
+            v)  local VERBOSE=y;;
+            D)  DESTDIR="${OPTARG}";;
+            a)  SERVICE="${OPTARG}";;
+            d)  DESCRIPTION="${OPTARG}";;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    if test -n "${DESTDIR}"; then SUDO=; fi
+    
+    ## Operations.
+    case "${ops}" in *a*) systemd_h_add "$@";; esac
+}
+systemd_h_add() {
+    local exec
+    if test -n "${VERBOSE}"; then
+        echo "Creating ${DESTDIR}/etc/systemd/system/${SERVICE}.service ..."
+    fi
+    if test ! -n "$1"; then
+        echo >&2 "error: Please specify an executable."
+        return 1
+    fi
+    exec="$(which "$1" 2>/dev/null || true)"
+    exec="${exec:+$1}"
+    shift
+    ${SUDO} mkdir -p ${DESTDIR}/etc/systemd/system
+    ${SUDO} tee ${DESTDIR}/etc/systemd/system/${SERVICE}.service >/dev/null <<-EOF
+	[Unit]
+	${DESCRIPTION:+description=${DESCRIPTION}
+	}After=network.target
+	StartLimitIntervalSec=0
+	
+	[Service]
+	Type=simple
+	Restart=always
+	RestartSec=1
+	User=root
+	ExecStart=${exec} $*
+	
+	[Install]
+	WantedBy=multi-user.target
+	EOF
+    if test -n "${SUDO}" && which systemctl >/dev/null 2>&1; then
+        ${SUDO} systemctl daemon-reload
+    fi
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"systemd-h";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            systemd_h "$@"; exit 0            ;;
+    esac
+fi
