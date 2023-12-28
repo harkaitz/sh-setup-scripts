@@ -1,0 +1,27 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-emacs -i : Install GNU Emacs.
+##:
+. wcompat
+msetup_emacs() {
+    local u d INS
+    u="http://ftp.gnu.org/gnu/emacs/windows/emacs-28/emacs-28.2-installer.exe"
+    d="C:/Program Files/Emacs/emacs-28.2"
+    wcompat chkadmin
+    if test ! -e "$d/bin/emacs.exe"; then
+        wcompat fetch-INS "$u"
+        wcompat g-exec "cmd /C $INS"
+    fi
+    wcompat wrapper emacs <<-EOF
+	#!/bin/sh -e
+	export SHELL='$WBINDIR/sh.exe'
+	"$WBINDIR/bin/runemacs.exe" "\$@"
+	EOF
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"msetup-emacs";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_emacs "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,23 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-telegram -i : Install telegram.
+##:
+. wcompat
+msetup_telegram() {
+    case "$(uname -m)" in
+        x86_64) local u="https://telegram.org/dl/desktop/win64";;
+        *)      local u="https://telegram.org/dl/desktop/win";;
+    esac
+    local i="${TEMP:-/tmp}/telegram-installer.exe"
+    local d="${APPDATA}/Telegram Desktop"
+    if test ! -e "${d}/Telegram.exe"; then
+        wcompat fetch "$i" "$u"
+        wcompat g-exec "cmd /C $i"
+    fi
+}
+if test @"$(basename "$0")" = @"msetup-telegram"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_telegram "$@"; exit 0  ;;
+    esac
+fi

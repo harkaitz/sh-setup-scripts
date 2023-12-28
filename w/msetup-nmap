@@ -1,0 +1,26 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-nmap -i
+##:
+. wcompat
+msetup_nmap() {
+    local u="https://nmap.org/dist/nmap-7.93-setup.exe"
+    local d="$PF32/Nmap" x INS
+    wcompat chkadmin
+    if test ! -e "${d}/nmap.exe"; then
+        wcompat fetch-INS "$u"
+        wcompat g-exec "cmd /C $INS"
+    fi
+    for x in ncat ndiff nmap nping zenmap; do
+        wcompat wrapper "$x" <<-EOF
+	#!/bin/sh -e
+	'${d}/${x}.exe' "\$@"
+	EOF
+    done
+}
+if test @"$(basename "$0")" = @"msetup-nmap";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_nmap "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,113 @@
+#!/bin/sh -e
+##:
+#h: Usage: wcompat ...
+#h:
+#h: ... chkadmin              : Require being system administrator.
+#h: ... fetch OFILE URL       :
+#h: ... fetch-INS   URL       : 
+#h: ... msiexec-i MSI ARGS... :
+#h: ... start FILE            :
+#h: ... explorer FILE         :
+#h: ... wrapper NAME < CODE   :
+#h: ... g-exec CMD            : Execute with a GUI.
+##:
+wcompat() {
+    local cmd="$1"
+    shift
+    case "${cmd}" in
+        chkadmin)    wcompat_chkadmin       ;;
+        fetch)       wcompat_fetch "$@"     ;;
+        fetch-INS)   wcompat_fetch_INS "$@" ;;
+        msiexec-i)   wcompat_msiexec_i "$@" ;;
+        start)       wcompat_start "$@"     ;;
+        explorer)    wcompat_explorer "$@"  ;;
+        wrapper)     wcompat_wrapper "$@"   ;;
+        g-exec)      wcompat_g_exec  "$@"   ;;
+        *)           echo >&2 "error: Invalid argument: ${cmd}"; return 1;;
+    esac
+}
+## -------------------------------------------------------------------
+wcompat_chkadmin() {
+    if test ! -w C:/Windows/System32; then
+        echo >&2 "error: Execute this as administrator."
+        return 1
+    fi
+}
+wcompat_fetch() {
+    local i="$1" u="$2"
+    if test ! -e "${i}"; then
+        echo "Downloading ${u} ..."
+        wget -O "${i}.tmp" "${u}"
+        mv -v "${i}.tmp" "${i}"
+    fi
+}
+wcompat_fetch_INS() {
+    local i="${DDIR:-${TEMP:-/tmp}}/$(basename "$1")" u="$1"
+    if test ! -e "${i}"; then
+        echo "Downloading ${u} ..."
+        wget -O "${i}.tmp" "${u}"
+        mv -v "${i}.tmp" "${i}"
+    fi
+    INS="$i"
+}
+wcompat_msiexec_i() {
+    local i="$1" p="$(pwd)"; shift
+    echo "Installing $(basename $i) ..."
+    cd "$(dirname "$i")"
+    msiexec /i "$(basename "$i")" "$@"
+    cd "$p"
+}
+wcompat_start() {
+    echo "Running $(basename $i) ..."
+    cmd /C start /wait "$1"
+}
+wcompat_explorer() {
+    local i="$1" p="$(pwd)"
+    echo "Installing $(basename $i) ..."
+    cd "$(dirname "$i")"
+    explorer.exe "$(basename "$i")"
+    cd "$p"
+}
+wcompat_wrapper() {
+    echo "Creating $WBINDIR/$1 ..."
+    cat > "$WBINDIR/$1"
+}
+wcompat_g_exec() {
+    if test -n "$SSH_CLIENT"; then
+        local scr="${TEMP:-/tmp}/gexec"
+        local res="${TEMP:-/tmp}/gres"
+        local wai="${TEMP:-/tmp}/gwait"
+        echo "This installer requires to have a GUI present." >&2
+        echo "You have 5 seconds to abort." >&2
+        sleep 5
+        echo "cd '$(pwd)'"                        > "${scr}"
+        echo 'echo "[Type enter when finished]"' >> "${scr}"
+        echo "$*"                                >> "${scr}"
+        echo "echo \$? > ${res}"                 >> "${scr}"
+        echo 'read ign'                          >> "${scr}"
+        echo "rm -f ${wai}"                      >> "${scr}"
+        touch "${wai}"
+        echo 1 > "${res}"
+        SCHTASKS /create /tn gexec /sc once /tr "busybox sh ${scr}" /ru interactive /st 00:00 /f
+        SCHTASKS /Run /tn gexec
+        while test -f "${wai}"; do sleep 1; done
+        SCHTASKS /delete /tn gexec /f
+        echo "Return code: $(cat ${res})"
+        return "$(cat "${res}")"
+    else
+        eval "$*"
+    fi
+}
+## -------------------------------------------------------------------
+WBINDIR='C:\Windows\System32'
+case "$(uname -m)" in
+    x86_64) PF32='C:/Program Files (x86)' PF64='C:/Program Files' PF='C:/Program Files';;
+    *)      PF32='C:/Program Files'       PF64='C:/Program Files' PF='C:/Program Files';;
+esac
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wcompat";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wcompat "$@"; exit 0;;
+    esac
+fi

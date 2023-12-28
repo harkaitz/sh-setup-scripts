@@ -1,0 +1,20 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-windbgx -i
+##:
+. wcompat
+msetup_windbgx() (
+    u="https://aka.ms/windbg/download"
+    i="${DDIR:-${TEMP:-/tmp}}/windbg.appinstaller"
+    x="${LOCALAPPDATA}/Microsoft/WindowsApps/windbgx.exe"
+    if test ! -e "$x"; then
+        wcompat fetch "$i" "$u"
+        wcompat g-exec "cd '$(dirname $i)'; explorer '$(basename $i)'"
+    fi
+)
+if test @"$(basename "$0")" = @"msetup-windbgx";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_windbgx "$@"; exit 0   ;;
+    esac
+fi

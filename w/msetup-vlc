@@ -1,0 +1,28 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-vlc -i
+##:
+. wcompat
+msetup_vlc() {
+    local u x
+    case "$(uname -m)" in
+        x86_64) u="https://softlibre.unizar.es/videolan/vlc/3.0.18/win64/vlc-3.0.18-win64.exe";;
+        *)      u="https://softlibre.unizar.es/videolan/vlc/3.0.18/win32/vlc-3.0.18-win32.exe";;
+    esac
+    x="$PF/VideoLAN/VLC/vlc.exe"
+    wcompat chkadmin
+    if test ! -e "$x"; then
+        wcompat fetch-INS "$u"
+        wcompat g-exec "cmd /C $INS"
+    fi
+    wcompat wrapper "vlc" <<-EOF
+	#!/bin/sh -e
+	"${x}" "\$@"
+	EOF
+}
+if test @"$(basename "$0")" = @"msetup-vlc";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_vlc "$@"; exit 0           ;;
+    esac
+fi

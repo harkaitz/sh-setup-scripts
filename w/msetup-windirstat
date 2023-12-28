@@ -1,0 +1,20 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-windirstat -i
+##:
+. wcompat
+msetup_windirstat() {
+    local u="https://windirstat.mirror.wearetriple.com//wds_current_setup.exe"
+    local x="$PF32/WinDirStat/windirstat.exe" INS
+    if test ! -e "$x"; then
+        wcompat fetch-INS "$u"
+        wcompat g-exec "cmd /C $INS"
+    fi
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"msetup-windirstat";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         msetup_windirstat "$@"; exit 0    ;;
+    esac
+fi

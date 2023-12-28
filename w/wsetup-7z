@@ -1,0 +1,28 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-7z -i
+#h:
+#h: Install 7z for windows silently (requires admin).
+##:
+. wcompat
+wsetup_7z() {
+    local u d
+    u="https://sourceforge.net/projects/sevenzip/files/7-Zip/23.01/7z2301.msi"
+    d="${PF32}/7-Zip"
+    wcompat chkadmin
+    if test ! -e "${d}/7z.exe"; then
+        wcompat fetch-INS "$u"
+        wcompat msiexec-i "$INS"
+    fi
+    wcompat wrapper 7z <<-EOF
+	#!/bin/sh -e
+	"${d}/7z.exe" "\$@"
+	EOF
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-7z"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_7z "$@"; exit 0 ;;
+    esac
+fi
