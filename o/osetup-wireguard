@@ -1,0 +1,69 @@
+#!/bin/sh -e
+##:
+#h: Usage: osetup-wireguard ...
+#h:
+#h: ... install : Install and enable WireGuard (bse0 interface).
+#h: ... pubkey  : Print public key.
+##:
+. hmain
+. hfile
+. osetup-forwarding
+osetup_wireguard() {
+    local cmd="$1"
+    shift
+    case "${cmd}" in
+        install) osetup_wireguard_install;;
+        pubkey)  cat /etc/wireguard/public.key ;;
+        *)       echo >&2 "error: Invalid argument: ${cmd}"; return 1;;
+    esac
+}
+## -------------------------------------------------------------------
+osetup_wireguard_install() {
+    local intf="bse0"
+    if ! which wg >/dev/null 2>&1; then
+        echo "Installing wireguard-tools ..."
+        pkg_add wireguard-tools
+    fi
+    if test ! -d /etc/wireguard; then
+        echo "Creating /etc/wireguard/ ..."
+        mkdir -p /etc/wireguard
+        chmod 700 /etc/wireguard
+    fi
+    if test ! -f /etc/wireguard/secret.key; then
+        echo "Creating /etc/wireguard/secret.key ..."
+        touch /etc/wireguard/secret.key
+        chmod 600 /etc/wireguard/secret.key
+        wg genkey > /etc/wireguard/secret.key
+    fi
+    if test ! -f /etc/wireguard/public.key; then
+        echo "Creating /etc/wireguard/public.key ..."
+        wg pubkey < /etc/wireguard/secret.key > /etc/wireguard/public.key
+    fi
+    if test ! -f /etc/wireguard/wg0.conf; then
+        echo "Creating /etc/wireguard/wg0.conf ..."
+        cat > /etc/wireguard/wg0.conf <<-EOF
+	[Interface]
+	PrivateKey = $(cat /etc/wireguard/secret.key)
+	ListenPort = 51820
+	EOF
+    fi
+    if test ! -f /etc/hostname.wg0; then
+        echo "Creating /etc/hostname.wg0 ..."
+        cat > /etc/hostname.wg0 <<-EOF
+	inet 10.0.0.1 255.255.255.0 NONE
+	up
+	!/usr/local/bin/wg setconf wg0 /etc/wireguard/wg0.conf 
+	EOF
+    fi
+    echo "Updating /etc/pf.conf ..."
+    hfile fadd /etc/pf.conf WIREGUARD <<-EOF
+	pass in on wg0
+	pass in inet proto udp from any to any port 51820
+	pass out on egress inet from (wg0:network) nat-to (${intf}:0) 
+	EOF
+    echo "Restarting wg0 interface and refreshing firewall ..."
+    sh /etc/netstart wg0
+    pfctl -f /etc/pf.conf 
+}
+## -------------------------------------------------------------------
+hmain -f "osetup-wireguard" osetup_wireguard "$@"

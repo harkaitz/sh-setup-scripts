@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: lsetup-forwarding enable|disable|status (sysctl)
+##:
+. hlog
+. hmain
+. hfile
+lsetup_forwarding() {
+    local cmd="$1"
+    shift
+    case "${cmd}" in
+        enable)  lsetup_forwarding_enable  ;;
+        disable) lsetup_forwarding_disable ;;
+        status)  lsetup_forwarding_status  ;;
+        *)       hlog error "Invalid argument: ${cmd}"; return 1;;
+    esac
+}
+lsetup_forwarding_enable() {
+    hfile cfadd sudo /etc/sysctl.conf net.ipv4.ip_forward=1
+    sudo sysctl net.ipv4.ip_forward=1
+}
+lsetup_forwarding_disable() {
+    hfile cfadd sudo /etc/sysctl.conf net.ipv4.ip_forward=0
+    sudo sysctl net.ipv4.ip_forward=0
+}
+lsetup_forwarding_status() {
+    sudo sysctl net.ipv4.ip_forward
+}
+## -------------------------------------------------------------------
+hmain -f "lsetup-forwarding" lsetup_forwarding "$@"

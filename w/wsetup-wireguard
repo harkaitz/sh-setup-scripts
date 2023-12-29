@@ -1,0 +1,63 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-wireguard ...
+#h:
+#h: ... download : Download installer.
+#h: ... install  : Install and enable WireGuard.
+#h: ... pubkey   : Print public key.
+##:
+. hmain
+. hlog
+. wcompat
+wsetup_wireguard() {
+    local cmd="$1" INS
+    shift
+    case "${cmd}" in
+        download) wsetup_wireguard_download; echo "$INS" ;;
+        install)  wsetup_wireguard_install  ;;
+        pubkey)   cat C:/etc/wireguard/public.key;;
+        *)        hlog error "Invalid argument: ${cmd}"; return 1;;
+    esac
+}
+## -------------------------------------------------------------------
+wsetup_wireguard_download() {
+    local u
+    case "${HUNAME_MACHINE:-$(uname -m)}" in
+        x86_64) u="https://download.wireguard.com/windows-client/wireguard-amd64-0.5.3.msi";;
+        *)      u="https://download.wireguard.com/windows-client/wireguard-x86-0.5.3.msi";;
+    esac
+    wcompat fetch-INS "$u"
+}
+wsetup_wireguard_install() {
+    local INS
+    if test ! -e "$PF/WireGuard/wg.exe"; then
+        wsetup_wireguard_download
+        wcompat msiexec-i "$INS" /qn /norestart
+    fi
+    export PATH="$PF/WireGuard;$PATH"
+    if test ! -f C:/etc/wireguard/secret.key; then
+        hlog info "Creating C:/etc/wireguard/secret.key ..."
+        mkdir -p C:/etc/wireguard
+        wg genkey > C:/etc/wireguard/secret.key
+    fi
+    if test ! -f C:/etc/wireguard/public.key; then
+        hlog info "Creating C:/etc/wireguard/public.key ..."
+        wg pubkey < C:/etc/wireguard/secret.key > C:/etc/wireguard/public.key
+    fi
+    if test ! -f C:/etc/wireguard/wg0.conf; then
+        hlog info "Creating C:/etc/wireguard/wg0.conf ..."
+        cat > C:/etc/wireguard/wg0.conf <<-EOF
+	[Interface]
+	PrivateKey = $(cat C:/etc/wireguard/secret.key)
+	Address = IPADDR
+	ListenPort = 51820
+	EOF
+    fi
+    if grep -q IPADDR C:/etc/wireguard/wg0.conf; then
+        hlog warning "Replace IPADDR in C:/etc/wireguard/wg0.conf."
+    fi
+    
+}
+## -------------------------------------------------------------------
+hmain -f "wsetup-wireguard" wsetup_wireguard "$@"
+

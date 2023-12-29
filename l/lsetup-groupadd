@@ -1,0 +1,26 @@
+#!/bin/sh -e
+##:
+#h: Usage: groups-h-add GROUPS...
+#h:
+#h: Create groups and add current user to them.
+##:
+lsetup_groupadd() {
+    local grp
+    for grp in "$@"; do
+        if ! grep "^${grp}:" /etc/group >/dev/null 2>&1; then
+            echo "GROUPADD '${grp}' ..."
+            sudo groupadd "${grp}" 2>/dev/null || true
+        fi
+        if ! grep "^${grp}:.*[:,]$(whoami)" /etc/group >/dev/null 2>&1; then
+            echo "USERMOD $(whoami) GROUP '${grp}' ..."
+            sudo usermod -a -G "${grp}" "$(whoami)"
+        fi
+    done
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"lsetup-groupadd";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            lsetup_groupadd "$@"; exit 0;;
+    esac
+fi

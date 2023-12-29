@@ -37,7 +37,7 @@ wcompat_fetch() {
     local i="$1" u="$2"
     if test ! -e "${i}"; then
         echo "Downloading ${u} ..."
-        wget -O "${i}.tmp" "${u}"
+        wget --no-check-certificate -O "${i}.tmp" "${u}"
         mv -v "${i}.tmp" "${i}"
     fi
 }
@@ -45,7 +45,7 @@ wcompat_fetch_INS() {
     local i="${DDIR:-${TEMP:-/tmp}}/$(basename "$1")" u="$1"
     if test ! -e "${i}"; then
         echo "Downloading ${u} ..."
-        wget -O "${i}.tmp" "${u}"
+        wget --no-check-certificate -O "${i}.tmp" "${u}"
         mv -v "${i}.tmp" "${i}"
     fi
     INS="$i"

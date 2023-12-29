@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: lsetup-pcspkr enable|disable : PC speaker.
+##:
+lsetup_pcspkr() {
+    local cmd="$1"
+    shift
+    case "${cmd}" in
+        enable|e)
+            sudo modprobe pcspkr
+            sudo rm -f /etc/modprobe.d/disable-pcspkr.conf
+            ;;
+        disable|d)
+            sudo rmmod pcspkr
+            sudo tee /etc/modprobe.d/disable-pcspkr.conf >/dev/null <<-EOF
+		blacklist pcspkr
+		EOF
+            ;;
+        *)  echo >&2 "error: Invalid argument: ${cmd}"
+            return 1
+            ;;
+    esac
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"lsetup-pcspkr";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            lsetup_pcspkr "$@"; exit 0    ;;
+    esac
+fi
