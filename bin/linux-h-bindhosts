@@ -3,6 +3,8 @@
 #h: Usage: linux-h-bindhosts -u | NAMES....
 #h:
 #h: Temporarily map names to 127.0.0.1 in "/etc/hosts".
+#h:
+#h: Platforms: Linux
 ##:
 linux_h_bindhosts() {
     local sed=''

@@ -1,0 +1,41 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-compat -w
+#h:
+#h: Create compativility wrappers on MS/Windows.
+#h:
+#h: - xdg-open : A wrapper around "explorer.exe".
+##:
+. wcompat
+wsetup_compat() {
+    local OPTIND optopt opt_w=
+    
+    ## Parse command line arguments.
+    while getopts "w" optopt; do
+        case $optopt in
+            w)  opt_w=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ##
+    if test -n "${opt_w}"; then
+        wcompat wrapper xdg-open <<-EOF
+	#!/bin/sh -e
+	case "\$1" in
+	    '')    echo "Usage: xdg-open FILE|URL"; exit 0;;
+	    *://*) u="\$1";;
+	    *)     u="\$(echo "\$1" | tr '/' '\\\\')";;
+	esac
+	explorer.exe "\$u"
+	EOF
+    fi
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-compat"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_compat "$@"; exit 0;;
+    esac
+fi

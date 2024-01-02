@@ -5,6 +5,8 @@
 #h:   -a NAME PROGRAM ARGS... : Create a normal waiting service.
 #h:
 #h: Create and manage services using runit.
+#h:
+#h: Platforms: Linux
 ##:
 runit_h() {
     local OPTIND optopt ops= SUDO=sudo DESTDIR SERVICE

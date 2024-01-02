@@ -75,6 +75,8 @@ wcompat_explorer() {
     cd "$p"
 }
 wcompat_wrapper() {
+    # C:/Users/80988/AppData/Local/Microsoft/WindowsApps
+    # ${LOCALAPPDATA}/Microsoft/WindowsApps
     echo "Creating $WBINDIR/$1 ..."
     cat > "$WBINDIR/$1"
 }

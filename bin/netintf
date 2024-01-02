@@ -1,0 +1,60 @@
+#!/bin/sh -e
+##:
+#h: Usage: busywin-netintf [-i type] ...
+#h:
+#h: -i type   : Select network type (ethernet).
+#h: -o line   : Print network interface line.
+#h: -o number : Print network interface number.
+#h: -o name   : Print network interface name.
+#h:
+#h: Note: This script is incomplete, help needed.
+#h:
+#h: Platforms: Windows_NT
+##:
+busywin_netintf() {
+    local OPTIND optopt ops= type="ethernet" opt_o= intf_line=
+
+    ## Parse command line arguments.
+    while getopts "i:o:" optopt; do
+        ops="${ops}${optopt}"
+        case $optopt in
+            i)  type="${OPTARG}"  ;;
+            o)  opt_o="${OPTARG}" ;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ## Get interface.
+    intf_line="$(busywin_netintf_get_intf_"${type}" "${type}")"
+    if test ! -n "${intf_line}"; then
+        echo >&2 "error: ${type}: Interface not found."
+        return 1
+    fi
+    intf_number="$(echo "${intf_line}" | sed -n 's|^ *\([0-9][0-9]*\).*|\1|p' )"
+    intf_name="$(echo   "${intf_line}" | sed -n 's|.*\.\.\.||p'               )"
+    
+    ## Get parameter.
+    case "${opt_o}" in
+        line)   echo "${intf_line}"   ;;
+        number) echo "${intf_number}" ;;
+        name)   echo "${intf_name}"   ;;
+    esac
+    
+    
+}
+## -------------------------------------------------------------------
+busywin_netintf_get_intf_ethernet() {
+    route print \
+        | sed -n '/Ethernet Conn/p;/Realtek/p' \
+        | sed '/USB/d' \
+        | tail -n 1
+}
+
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"busywin-netintf";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            busywin_netintf "$@"; exit 0;;
+    esac
+fi

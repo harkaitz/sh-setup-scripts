@@ -1,0 +1,61 @@
+#!/bin/sh -e
+##:
+#h: Usage: startx
+#h:
+#h: Launch X server in a windows machine and apply rules from
+#h: ~/.Xresources.
+#h:
+#h: Platforms: Windows_NT
+##:
+startx() {
+    ## Check installation.
+    local idir='C:\Program Files\VcXsrv'
+    if test ! -e "${idir}"; then
+        echo >&2 "error: Please install X server for windows (VcXsrv)."
+        return 1
+    fi
+    
+    ## Create configuration.
+    cat > ~/.xlaunch.cfg <<-EOF
+	<?xml version="1.0" encoding="UTF-8"?>
+	<XLaunch
+	    WindowMode="MultiWindow"
+	    ClientMode="NoClient"
+	    LocalClient="False"
+	    Display="-1"
+	    LocalProgram="xcalc"
+	    RemoteProgram="xterm"
+	    RemotePassword=""
+	    PrivateKey=""
+	    RemoteHost=""
+	    RemoteUser=""
+	    XDMCPHost=""
+	    XDMCPBroadcast="False"
+	    XDMCPIndirect="False"
+	    Clipboard="True"
+	    ClipboardPrimary="True"
+	    ExtraParams=""
+	    Wgl="True"
+	    DisableAC="True"
+	    XDMCPTerminate="False"
+	/>
+	EOF
+    ## Execute xstart.
+    if test ! -n "$(ps -A | grep '[0-9] *vcxsrv.exe' || true)"; then
+        echo "Starting X server ..."
+        "${idir}/xlaunch.exe" -run ~/.xlaunch.cfg
+        sleep 4
+    fi
+    ## Load configuration.
+    if test -e ~/.Xresources; then
+        echo "Loading ~/.Xresources ..."
+        DISPLAY="localhost:0" "${idir}/xrdb.exe" -load ~/.Xresources
+    fi
+}
+
+if test @"$(basename "$0")" = @"startx";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)         startx "$@"; exit 0               ;;
+    esac
+fi

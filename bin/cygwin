@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: cygwin COMMAND
+#h:
+#h: Platform: Windows_NT
+##:
+#help: Execute command in Cygwin.
+#Category: utilities
+##:
+cygwin() {
+    case "$(uname -o)" in *Cygwin*) sh -ec "$*"; return 0;; esac
+    local cmd="
+        cd '`pwd`'
+        export SHELLOPTS
+        set -o igncr
+        $*
+    "
+    if test -e 'C:\cygwin64\bin\bash.exe'; then
+        'C:\cygwin64\bin\bash.exe' --login -e -c "${cmd}"
+    else
+        'C:\Cygwin\bin\bash.exe' --login -e -c "${cmd}"
+    fi
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"cygwin";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            cygwin "$@"; exit 0;;
+    esac
+fi
