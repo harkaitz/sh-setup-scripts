@@ -1,0 +1,17 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-msys2-perl -i
+##:
+. wcompat
+wsetup_msys2_perl() {
+    if test ! -e "C:/msys64/mingw64/bin/perl.exe"; then
+        wcompat msys2 pacman -S "mingw-w64-x86_64-perl" "mingw-w64-x86_64-perl-doc"
+    fi
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-msys2-perl"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_msys2_perl "$@"; exit 0;;
+    esac
+fi

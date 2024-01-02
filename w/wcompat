@@ -10,20 +10,22 @@
 #h: ... explorer FILE         :
 #h: ... wrapper NAME < CODE   :
 #h: ... g-exec CMD            : Execute with a GUI.
+#h: ... msys2 CMD             : Install packages in MSYS2.
 ##:
 wcompat() {
     local cmd="$1"
     shift
     case "${cmd}" in
-        chkadmin)    wcompat_chkadmin       ;;
-        fetch)       wcompat_fetch "$@"     ;;
-        fetch-INS)   wcompat_fetch_INS "$@" ;;
-        msiexec-i)   wcompat_msiexec_i "$@" ;;
-        start)       wcompat_start "$@"     ;;
-        explorer)    wcompat_explorer "$@"  ;;
-        wrapper)     wcompat_wrapper "$@"   ;;
-        g-exec)      wcompat_g_exec  "$@"   ;;
-        *)           echo >&2 "error: Invalid argument: ${cmd}"; return 1;;
+        chkadmin)  wcompat_chkadmin       ;;
+        fetch)     wcompat_fetch "$@"     ;;
+        fetch-INS) wcompat_fetch_INS "$@" ;;
+        msiexec-i) wcompat_msiexec_i "$@" ;;
+        start)     wcompat_start "$@"     ;;
+        explorer)  wcompat_explorer "$@"  ;;
+        wrapper)   wcompat_wrapper "$@"   ;;
+        g-exec)    wcompat_g_exec  "$@"   ;;
+        msys2)     wcompat_msys2 "$@" ;;
+        *)         echo >&2 "error: Invalid argument: ${cmd}"; return 1;;
     esac
 }
 ## -------------------------------------------------------------------
@@ -45,7 +47,11 @@ wcompat_fetch_INS() {
     local i="${DDIR:-${TEMP:-/tmp}}/$(basename "$1")" u="$1"
     if test ! -e "${i}"; then
         echo "Downloading ${u} ..."
-        wget --no-check-certificate -O "${i}.tmp" "${u}"
+        if which curl >/dev/null 2>&1; then
+            curl -L -o "${i}.tmp" "${u}"
+        else
+            wget --no-check-certificate -O "${i}.tmp" "${u}"
+        fi
         mv -v "${i}.tmp" "${i}"
     fi
     INS="$i"
@@ -98,6 +104,10 @@ wcompat_g_exec() {
         eval "$*"
     fi
 }
+wcompat_msys2() (
+    unset HOME
+    C:/msys64/usr/bin/bash.exe --login -e -c 'PATH="/mingw64/bin:\$PATH" "\$@"' -- "\$@"
+)
 ## -------------------------------------------------------------------
 WBINDIR='C:\Windows\System32'
 case "$(uname -m)" in

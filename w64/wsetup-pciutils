@@ -1,0 +1,63 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-pciutils -i
+##:
+. wcompat
+wsetup_pciutils() {
+    local OPTIND optopt ops=
+    
+    ## Parse command line arguments.
+    while getopts "di" optopt; do
+        ops="${ops}${optopt}"
+        case $optopt in
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ## Operations.
+    case "${ops}" in *d*) wsetup_pciutils_download ;; esac
+    case "${ops}" in *i*) wsetup_pciutils_install  ;; esac
+}
+## -------------------------------------------------------------------
+wsetup_pciutils_install() {
+    local z d="C:/Windows/System32/opt" b="C:/Windows/System32"
+    if test ! -w "C:/Windows"; then
+        echo >&2 "error: Execute this with administrator privileges."
+        return 1
+    elif test -e "Z:/bin/sh"; then
+        echo >&2 "Warning: pciutlis: Not supported in wine."
+        return 0
+    fi
+    
+    if test ! -e "${d}/${PCIUTILS}"; then
+        z="$(set -e; wsetup_pciutils_download)"; test -n "${z}"
+        mkdir -p "${d}"
+        unzip "${z}" -d"${d}"
+    fi
+ 
+    for n in lspci setpci; do
+        echo "Wrapper: ${b}/${n}"
+        cat > "${b}/${n}" <<-EOF
+	#!/bin/sh -e
+	if test ! -w C:/Windows; then
+	    echo >&2 "error: Execute this with administrator privileges."
+	    return 
+	fi
+	'${d}/${PCIUTILS}/${n}.exe' "\$@"
+	EOF
+    done
+}
+wsetup_pciutils_download() {
+    local u="https://eternallybored.org/misc/pciutils/releases/${PCIUTILS}.zip" INS
+    wcompat fetch-INS "$u"
+    echo "${INS}"
+}
+## -------------------------------------------------------------------
+PCIUTILS="pciutils-3.5.5-win64"
+if test @"$(basename "$0")" = @"wsetup-pciutils";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            wsetup_pciutils "$@"; exit 0      ;;
+    esac
+fi

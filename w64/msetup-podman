@@ -1,0 +1,58 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-podman -dic
+#h:
+#h: Download (-d), install (-i), configure and check (-c) podman. You
+#h: will need to add "C:/Program Files/RedHat/Podman" to PATH.
+##:
+msetup_podman() {
+    local OPTIND optopt u d i t opt_d= opt_i= opt_c=
+    u="https://github.com/containers/podman/releases/download/v4.2.0/podman-v4.2.0.msi"
+    d="C:/Program Files/Redhat/Podman"
+    t="${DDIR:-${TEMP:-/tmp}}"
+    i="${t}/$(basename "${u}")"
+    p="$(pwd)"
+    
+    ## Parse arguments.
+    while getopts "idc" optopt; do
+        case $optopt in
+            d)  opt_d=y;;
+            i)  opt_i=y;;
+            c)  opt_c=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+
+    ## Download.
+    if test ! -e "${i}" && { test -n "${opt_d}" || test ! -e "${d}/podman.exe"; }; then
+        echo "Downloading Podman ..."
+        wget -O "${i}.tmp" "${u}"
+        mv -v "${i}.tmp" "${i}"
+    fi
+    
+    ## Install podman.
+    if test -n "${opt_i}" && echo "Installing podman ..." && test ! -e "${d}/podman.exe"; then
+        case "$(uname -m)" in
+            x86_64) true;;
+            *)      echo >&2 "error: Unsupported platform: $(uname -m)"; return 1;;
+        esac
+        cd "$(dirname "$i")"
+        msiexec /i "$(basename "$i")" /quiet /passive /qn
+        cd "${p}"
+    fi
+    
+    ## Check.
+    if test -n "${opt_c}" && ! podman run --rm debian:10-slim echo "PODMAN WORKING"; then
+        podman machine init || true
+        podman machine set --rootful
+        cmd /C start /wait podman machine start
+        podman run --rm debian:10-slim echo "PODMAN WORKING"
+    fi
+}
+if test @"$(basename "$0")" = @"msetup-podman"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            msetup_podman "$@"; exit 0 ;;
+    esac
+fi

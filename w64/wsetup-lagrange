@@ -1,0 +1,31 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-lagrange -i
+#h:
+#h: Url: https://gmi.skyjake.fi/lagrange/
+##:
+. wcompat
+wsetup_lagrange() {
+    local m="https://git.skyjake.fi/gemini/lagrange/releases/download"
+    case "$(uname -m)" in
+        x86_64) local u="${m}/v1.17.4/lagrange_v1.17.4_windows-x64_portable.zip";;
+        *)      echo >&2 "error: Unsupported platform."; return 1;;
+    esac
+    local d="C:/opt/lagrange"
+    if test ! -e "$d/lagrange.exe"; then
+        wcompat fetch-INS "$u"
+        mkdir -p "$d"
+        unzip "$INS" -d "$d"
+    fi
+    wcompat wrapper lagrange <<-EOF
+	#!/bin/sh -e
+	'${d}/lagrange.exe' "\$@"
+	EOF
+    
+}
+if test @"$(basename "$0")" = @"wsetup-lagrange";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_lagrange "$@"; exit 0;;
+    esac
+fi

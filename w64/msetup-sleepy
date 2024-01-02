@@ -1,0 +1,82 @@
+#!/bin/sh -e
+##:
+#h: Usage: msetup-sleepy -di
+#h:
+#h: Install speepy profiler in MS/Windows.
+##:
+msetup_sleepy() {
+    local OPTIND optopt ops=
+    ## Parse command line arguments.
+    while getopts "di" optopt; do
+        ops="${ops}${optopt}"
+        case $optopt in
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    ## Operations.
+    case "${ops}" in *d*) wsetup_sleepy_download ;; esac
+    case "${ops}" in *i*) wsetup_sleepy_install  ;; esac
+}
+wsetup_sleepy_download() {
+    local u i
+    u="https://github.com/VerySleepy/verysleepy/releases/download/v0.91/verysleepy-0.91.exe"
+    i="${DDIR:-${TEMP:-/tmp}}/$(basename "${u}")"
+    if test ! -e "${i}"; then
+        wget -O "${i}.tmp" "${u}" >&2
+        mv -v "${i}.tmp" "${i}"   >&2
+    fi
+    echo "${i}"
+}
+wsetup_sleepy_install() {
+    local d i
+    d='C:\Program Files\Very Sleepy'
+    w='C:\Windows\System32'
+
+    ## Require administrator.
+    if test ! @"$(uname -m)" = @"x86_64"; then
+        echo >&2 "error: Unsupported platform: $(uname -m)"
+        return 1
+    elif test ! -w "${w}"; then
+        echo >&2 "error: Please execute this as administrator."
+        return 1
+    fi
+
+    ## Install Sleepy.
+    if test ! -e "${d}/sleepy.exe"; then
+        i="$(wsetup_sleepy_download)"; test -n "${i}"
+        "${i}"
+    fi
+
+    ## Create wrappers.
+    echo "Creating '${w}/sleepy' ..."
+    cat > "${w}/sleepy" <<-EOF
+	#!/bin/sh -e
+	'${d}/sleepy.exe' "\$@"
+	EOF
+    echo "Creating '${w}/sleepy.bat' ..."
+    cat > "${w}/sleepy.bat" <<-EOF
+	@"${d}\\sleepy.exe" %*
+	EOF
+
+    ## Create helper script.
+    echo "Creating '${w}/profiler' ..."
+    cat > "${w}/profiler" <<-EOF
+	#!/bin/sh -e
+	'${d}/sleepy.exe' \${SLEEPY_OUTPUT:+ /o:"\${SLEEPY_OUTPUT}" } /mt /r:"\$*"
+	EOF
+    echo "Creating '${w}/profiler.bat' ..."
+    cat > "${w}/profiler.bat" <<-EOF
+	@sh.exe -e "${w}\\profiler" %*
+	EOF
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"msetup-sleepy";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            msetup_sleepy "$@"; exit 0;;
+    esac
+fi
+##: - http://www.codersnotes.com/sleepy/
+##: - https://stackoverflow.com/questions/413477/is-there-a-good-valgrind-substitute-for-windows
+##: - https://reverseengineering.stackexchange.com/questions/16081/how-to-generate-the-call-graph-of-a-binary-file

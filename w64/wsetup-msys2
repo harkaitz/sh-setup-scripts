@@ -1,0 +1,111 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-msys2 -iw
+#h:
+#h: Download and install msys2 in "C:/msys64" (-w) and create wrappers
+#h: for "nroff", "tbl" and "groff" and add manpages to MANPATH.
+##:
+. wcompat
+wsetup_msys2() {
+    local OPTIND optopt opt_i= opt_w=
+    
+    ## Parse command line options.
+    while getopts "iw" optopt; do
+        case $optopt in
+            i)  opt_i=y;;
+            w)  opt_w=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ## Operations.
+    wcompat chkadmin
+    if test -n "${opt_i}"; then
+        wsetup_msys2_install
+    fi
+    if test -n "${opt_w}${opt_i}"; then
+        wsetup_msys2_wrappers_login
+        wsetup_msys2_wrappers       /usr/bin/nroff /usr/bin/tbl.exe /usr/bin/groff.exe
+        wsetup_msys2_etc_profile
+    fi
+}
+## -------------------------------------------------------------------
+wsetup_msys2_install() {
+    local u i INS
+    u="https://github.com/msys2/msys2-installer/releases/download/2022-12-16/msys2-x86_64-20221216.exe"
+    echo "Installing Msys2 ..."
+    if test ! -e "C:/msys64/usr/bin/bash.exe"; then
+        wcompat fetch-INS "$u"
+        if test -n "${INTERACTIVE}"; then
+            "${INS}"
+        else
+            "${INS}" install --root C:\\msys64 --confirm-command
+        fi
+    fi
+}
+wsetup_msys2_wrappers_login() {
+    local f n
+    echo "Creating msys2-sh.sh ..."
+    wcompat wrapper "msys2-sh.sh" <<-EOF
+	#!/bin/sh -e
+	export PS1="[MSYS]\${PS1}"
+	C:/msys64/usr/bin/bash.exe --login "\${@:--i}"
+	EOF
+    echo "Creating msys2-cmd.sh ..."
+    wcompat wrapper "msys2-cmd.sh" <<-EOF
+	#!/bin/sh -e
+	if test ! -n "\$1"; then
+	    echo 'Usage: msys2-cmd COMMAND'
+	    echo ''
+	    echo 'Execute command in MSYS2.'
+	    echo ''
+	fi
+	unset HOME
+	C:/msys64/usr/bin/bash.exe --login -e -c 'PATH="/mingw64/bin:\$PATH" "\$@"' -- "\$@"
+	EOF
+    for f in "$@"; do
+        n="$(basename "${f}")"
+        if test -e Z:/bin/sh; then
+            echo "Deleting ${n}.sh (Wine) ..."
+            rm -f "${WBINDIR}/${n}.sh"
+        else
+            echo "Creating ${n}.sh ..."
+            wcompat wrapper "${n}.sh" <<-EOF
+		#!/bin/sh -e
+		msys2-cmd "${f}" "\$@"
+		EOF
+        fi
+    done
+}
+wsetup_msys2_wrappers() {
+    local f n
+    for f in "$@"; do
+        n="$(basename "${f}" .exe)"
+        echo "Creating ${n} link ..."
+        wcompat wrapper "${n}.sh" <<-EOF
+	#!/bin/sh -e
+	"C:/Msys64${f}" "\$@"
+	EOF
+    done
+}
+wsetup_msys2_etc_profile() {
+    echo "Adding MANPATH in C:/etc/profile ..."
+    mkdir -p 'C:/etc'
+    if test -e 'C:/etc/profile'; then
+        sed -i '/[@]MSYS2[@]/,/[@]MSYS2[@]/d' 'C:/etc/profile'
+    fi
+    cat >> 'C:/etc/profile' <<-EOF
+	## @MSYS2@
+	export MANPATH='${MANPATH:+${MANPATH};}C:/msys64/usr/share/man'
+	## @MSYS2@
+	EOF
+}
+## -------------------------------------------------------------------
+MINGW64="C:/msys64/mingw64"
+if test @"$(basename "$0")" = @"wsetup-msys2"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            wsetup_msys2 "$@"; exit 0;;
+    esac
+fi
