@@ -1,0 +1,61 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-gnucash -d -i -w
+#h:
+#h: Script for installing gnucash (2.6.7) in a windows machine.
+##:
+wsetup_gnucash() {
+    local OPTIND optopt url opt_d= opt_i= opt_w=
+    
+    ## Parse command line arguments.
+    while getopts "diw" optopt; do
+        case $optopt in
+            d)  opt_d=y;;
+            i)  opt_i=y;;
+            w)  opt_w=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    dir="${PROGRAMFILES_x86_:-${PROGRAMFILES:-C:\\Program Files (x86)}}\\gnucash"
+    
+    ## Skip if already installed.
+    if test -n "${opt_i}" && test -e "${dir}/bin/gnucash.exe"; then
+        opt_i=
+    fi
+    
+    ## Download installer.
+    if test -n "${opt_i}${opt_d}"; then
+        url="http://downloads.sourceforge.net/sourceforge"
+        url="${url}/gnucash/gnucash-${GNUCASH_VERSION}-setup.exe"
+        ins="${DDIR:-${TEMP:-/tmp}}/gnucash-${GNUCASH_VERSION}-setup.exe"
+        if test ! -f "${ins}"; then
+            wget -O "${ins}.tmp" "${url}"
+            mv -v "${ins}.tmp" "${ins}"
+        fi
+    fi
+
+    ## Install the program.
+    if test -n "${opt_i}"; then
+        cmd /C "$(echo "${ins}" | tr '/' '\\')"
+    fi
+
+    ## Install wrappers.
+    if test -n "${opt_w}"; then
+        echo "gnucash"
+        cat > "${LOCALAPPDATA}/Microsoft/WindowsApps/gnucash" <<-EOF
+	#!/bin/sh -e
+	export LANGUAGE=es_ES.UTF-8
+	export LANG=es_ES.UTF-8
+	"${dir}/bin/gnucash.exe" "\$@"
+	EOF
+    fi
+}
+## -------------------------------------------------------------------
+GNUCASH_VERSION="${GNUCASH_VERSION:-2.6.7}"
+if test @"${SCRNAME:-$(basename "$0")}" = @"wsetup-gnucash"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_gnucash "$@"; exit 0;;
+    esac
+fi

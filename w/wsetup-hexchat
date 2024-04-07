@@ -1,0 +1,86 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-hexchat ...
+#h:
+#h: -d :
+#h: -i :
+wsetup_hexchat() {
+    local OPTIND optopt url ins opt_d= opt_i=
+    
+    ## Parse command line arguments.
+    while getopts "di" optopt; do
+        case $optopt in
+            d)  opt_d=y;;
+            i)  opt_i=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    odir="${PROGRAMFILES_X86_:-${PROGRAMFILES}}/HexChat"
+    wdir="${LOCALAPPDATA}/Microsoft/WindowsApps"
+
+    ## Check whether to download
+    if test ! -f "${dir}/hexchat.exe"; then
+        opt_d="y"
+    fi
+    
+    ## Download installer.
+    if test -n "${opt_d}"; then
+        url='https://dl.hexchat.net/hexchat'
+        case "$(uname -m)" in
+            x86_64) url="${url}/HexChat%20${HEXCHAT_VERSION}%20x64.exe";;
+            i*)     url="${url}/HexChat%20${HEXCHAT_VERSION}%20x86.exe";;
+            *)      echo >&2 "Unsupported platform"; return 1;;
+        esac
+        ins="${DDIR:-${TEMP:-/tmp}}/HexChat-${HEXCHAT_VERSION}.exe"
+        if test ! -f "${ins}"; then
+            wget -O "${ins}.tmp" "${url}" >&2
+            mv -v "${ins}.tmp" "${ins}"
+        fi
+        ins="$(echo "${ins}" | tr '/' '\\')"
+    fi
+    
+    ## Install.
+    if test -n "${opt_i}"; then
+        if test ! -f "${odir}/hexchat.exe"; then
+            cmd /C "${ins}"
+        fi
+        echo "hexchat"
+        cat > "${wdir}/hexchat" <<-EOF
+		#!/bin/sh -e
+		"${odir}/hexchat.exe" "\$@"
+		EOF
+    fi
+    
+}
+HEXCHAT_VERSION="${HEXCHAT_VERSION:-2.16.1}"
+if test @"${SCRNAME:-$(basename "$0")}" = @"wsetup-hexchat"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_hexchat "$@"; exit 0;;
+    esac
+fi
+exit 0
+
+
+
+
+#### HEXCHAT ###############################################################
+HPKG_HEXCHAT_I="https://dl.hexchat.net/hexchat/HexChat%202.10.0%20x86.exe"
+hpkg_hexchat_windows_install() {
+    local x="`hrknix wine pf32 HexChat/hexchat.exe`" \
+          l="$LOCAL_PREFIX/bin/hexchat"
+    if test ! -f "$x";then
+        hrknix wine "`hrknix download hexchat-i.exe "$HPKG_HEXCHAT_I"`"
+    fi
+    hrknix wrapper "$l" wine "$x"
+}
+hpkg_hexchat_linux_install() {
+    hpkg_hexchat_windows_install
+}
+hexchat() { "hpkg_hexchat_${PLATFORM}_install"; "`which hexchat`" "$@"; }
+
+
+
+
+

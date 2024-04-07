@@ -1,0 +1,49 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-prefix -i
+#h:
+#h: Install directories in C:/ that mimic a UNIX environment. Things
+#h: like "C:/tmp" or "C:/etc/profile.d".
+##:
+wsetup_prefix() {
+    if test ! -w C:/Windows; then
+        echo >&2 "error: Please execute as administrator."
+        return 1
+    fi
+    echo "Creating links for Msys compatibility ..."
+    echo "- C://c"; test -e /c || ln -vs "C:/" /c
+    echo "Creating directories to mimic a UNIX environment ..."
+    echo "- C://tmp"; test -e /tmp || ln -vs "${TEMP}" /tmp
+    echo "- C://bin";           mkdir -p C://bin
+    echo "- C://usr/bin";       mkdir -p C://usr/bin
+    echo "- C://usr/share";     mkdir -p C://usr/share
+    echo "- C://opt/bin";       mkdir -p C://opt/bin
+    echo "- C://etc/profile.d"; mkdir -p C://etc/profile.d
+    echo "Creating a reasonable C://etc/profile ..."
+    if test -e C:/etc/profile; then
+        sed -i '/--BASE--/,/--BASE--/d' C:/etc/profile
+    fi
+    mkdir -p C:/etc/profile.d
+    touch C:/etc/profile.d/SETTINGS.sh
+    local ps1='\033]0;\w\007\033[1m[\u@\h]: \w\033[0m\n> '
+    cat >> C:/etc/profile <<-EOF
+	## --BASE--
+	export PATH="./build;.;\${PATH}"
+	export PS1='${ps1}'
+	export HOME="\${HOME:-\${USERPROFILE}}"
+	if test -d C:/etc/profile.d; then
+	    for i in C:/etc/profile.d/*.sh; do
+	        . \$i
+	    done
+	    unset i
+	fi
+	## --BASE--
+	EOF
+    
+}
+if test @"$(basename "$0")" = @"wsetup-prefix"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_prefix "$@"; exit 0        ;;
+    esac
+fi

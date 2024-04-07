@@ -1,0 +1,66 @@
+#!/bin/sh -e
+##:
+#h: Usage: htpass ...
+#h:
+#h:     -s SERVICE  : Select by service name.
+#h:     -f FILE     : Select by filename.
+#h:     -l          : List services/users.
+#h:     -a USER...  : Add users or change password.
+#h:
+#h: Manage passwords in /etc/htpasswd/SERVICE with `htpasswd(1)`.
+##:
+htpass() {
+    
+    ## Parse command line arguments.
+    local OPTIND optopt opt_l='' opt_a='' htpasswd=''
+    while getopts "s:f:la" optopt; do
+        case $optopt in
+            s)   htpasswd="/etc/htpasswd/$OPTARG";;
+            f)   htpasswd="$OPTARG";;
+            l)   opt_l=y;;
+            a)   opt_a=y;;
+            \?)  return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+
+    ## List services.
+    if test -n "$opt_l" && test ! -n "$htpasswd"; then
+        if test -d /etc/htpasswd; then
+            find "/etc/htpasswd" \
+                 -maxdepth 1     \
+                 -mindepth 1     \
+                 -type f         \
+                 -exec basename {} \; 
+        fi
+        return 0
+    fi
+
+    ## Require service or file.
+    if test ! -n "${htpasswd}"; then
+        echo >&2 "error: Please specify a service with -s. List with -l."
+        return 1
+    elif test ! -f "${htpasswd}"; then
+        echo >&2 "error: The file does not exist."
+        return 1
+    fi
+
+    ## Add users.
+    while test -n "$1"; do
+        sudo htpasswd -B "${htpasswd}" "${1}"
+        shift
+    done
+
+    ## List users.
+    if test -n "${opt_l}"; then
+        sudo sed 's|:.*||' "${htpasswd}"
+        return 0
+    fi
+}
+## -------------------------------------------------------------------
+if test @"${SCRNAME:-$(basename "$0")}" = @"htpass"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            htpass "$@"; exit 0               ;;
+    esac
+fi

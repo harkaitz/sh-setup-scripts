@@ -1,0 +1,72 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-putty ...
+#h:
+#h: PuTTY is an open source ssh client for MS Windows written by
+#h: Simon Tatham (https://www.chiark.greenend.org.uk/~sgtatham/).
+#h:
+#h:   -i : Install putty for the user.
+#h:   -d : Download putty zip.
+#h:   -w : Open official website (www.chiark.greenend.org.uk).
+#h:
+#h: The program is hosted in "https://the.earth.li".
+##:
+wsetup_putty() {
+    local OPTIND optopt arch zip url wdir w opt_i= opt_d= opt_w=
+    
+    ## Parse command line arguments.
+    while getopts "idw" optopt; do
+        local ops="${ops}${optopt}"
+        case $optopt in
+            i)  opt_i=y;;
+            d)  opt_d=y;;
+            w)  opt_w=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+    ## Download zip.
+    if test -n "${opt_i}${opt_d}"; then
+        url='https://the.earth.li/~sgtatham/putty/latest'
+        case "$(uname -m)" in
+            x86_64) url="${url}/w64/putty.zip";;
+            i*)     url="${url}/w32/putty.zip";;
+            *)      echo >&2 "Unsupported platform"; return 1;;
+        esac
+        zip="${DDIR:-${TEMP:-/tmp}}/putty.zip"
+        if test ! -f "${zip}"; then
+            wget -O "${zip}.tmp" "${url}" >&2
+            mv -v "${zip}.tmp" "${zip}"
+        fi
+    fi
+    
+    ## Install zip.
+    if test -n "${opt_i}"; then
+        wdir="${LOCALAPPDATA}/Microsoft/WindowsApps"
+        odir="${LOCALAPPDATA}/Putty"
+        if test ! -f "${odir}/PUTTY.exe"; then
+            unzip -q -o "${zip}" -d "${odir}"
+        fi
+        for w in putty plink psftp pscp puttygen; do
+            echo "${w}"
+            cat > "${wdir}/${w}" <<-EOF
+		#!/bin/sh -e
+		'${odir}/${w}.exe' "\$@"
+		EOF
+        done
+        echo "hdoc_putty"
+        cat > "${wdir}/hdoc_putty" <<-EOF
+		#!/bin/sh -e
+		start "$(echo "${odir}" | tr '/' '\\')\\PUTTY.CHM"
+		EOF
+    fi
+    
+    return 0
+}
+if test @"${SCRNAME:-$(basename "$0")}" = @"wsetup-putty"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_putty "$@"; exit 0;;
+    esac
+fi

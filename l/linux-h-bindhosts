@@ -1,0 +1,36 @@
+#!/bin/sh -e
+##:
+#h: Usage: linux-h-bindhosts -u | NAMES....
+#h:
+#h: Temporarily map names to 127.0.0.1 in "/etc/hosts".
+#h:
+#h: Platforms: Linux
+##:
+linux_h_bindhosts() {
+    local sed=''
+    if test @"$1" = @"-u"; then
+        sudo umount /etc/hosts || true
+        shift
+    else
+        sudo umount /etc/hosts >/dev/null 2>&1 || true
+        sudo cp /etc/hosts /etc/hosts.copy
+        for arg in "$@"; do
+            sed="${sed}
+            \\| ${arg}$|d
+            1i127.0.0.1 ${arg}
+            "
+        done
+        sudo sed -i "${sed}" /etc/hosts.copy
+        sudo mount -o ro,bind /etc/hosts.copy /etc/hosts
+    fi
+    for arg in "$@"; do
+        ping -c 1 "${arg}" | head -n 1
+    done
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"linux-h-bindhosts";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            linux_h_bindhosts "$@"; exit 0   ;;
+    esac
+fi

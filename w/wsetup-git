@@ -1,0 +1,63 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-git -i
+#h:
+#h: Install Git for windows silently.
+##:
+wsetup_git() {
+    local u i d p b p="$(pwd)"
+
+    u="https://github.com/git-for-windows/git/releases/download"
+    case "$(uname -m)" in
+        x86_64) u="${u}/v2.40.0.windows.1/Git-2.40.0-64-bit.exe";;
+        *)      u="${u}/v2.40.0.windows.1/Git-2.40.0-32-bit.exe";;
+    esac
+    i="${DDIR:-${TEMP:-/tmp}}/$(basename "$u")"
+    d="C:/Program Files/Git"
+    
+    ## Require administrator.
+    if test ! -w C:/Windows/System32; then
+        echo >&2 "Warning: Execute this as administrator."
+        return 1
+    fi
+    
+    ## Not supported in wine
+    if test -e Z:/bin/sh; then
+        echo >&2 "Warning: Installer not supported in Wine, skipping."
+        return 0
+    fi
+    
+    ## Install git.
+    if test ! -e "${d}/cmd/git.exe"; then
+        if test ! -e "${i}"; then
+            echo "Downloading Git installer ..."
+            wget -q -O "${i}.tmp" "${u}"
+            mv "${i}.tmp" "${i}"
+        fi
+        echo "Installing Git (will take a long time) ..."
+        "${i}" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+    fi
+    
+    ## Create wrappers.
+    find "${d}/cmd" -iname '*.exe' | while read -r p; do
+        b="$(basename "${p}" .exe)"
+        echo "Creating C:/Windows/System32/${b}"
+        cat > "C:/Windows/System32/${b}" <<-EOF
+		#!/bin/sh -e
+		export PATH="${d}/bin;${d}/cmd;\${PATH}"
+		"${d}/cmd/${b}.exe" "\$@"
+		EOF
+    done
+    
+    ## Install lfs.
+    echo "Installing git-lfs ..."
+    cd "$d"
+    ./cmd/git-lfs install >/dev/null
+    cd "$p"
+}
+if test @"$(basename "$0")" = @"wsetup-git"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_git "$@"; exit 0;;
+    esac
+fi

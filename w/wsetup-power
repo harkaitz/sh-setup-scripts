@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-power [1 (Disable all powersave features)]
+##:
+wsetup_power() {
+    case "$1" in
+        1)
+            powercfg /x -hibernate-timeout-ac 0
+            powercfg /x -hibernate-timeout-dc 0
+            powercfg /x -disk-timeout-ac      0
+            powercfg /x -disk-timeout-dc      0
+            powercfg /x -monitor-timeout-ac   0
+            powercfg /x -monitor-timeout-dc   0
+            powercfg /x -standby-timeout-ac   0
+            powercfg /x -standby-timeout-dc   0
+            ;;
+        *)
+            echo >&2 "error: Invalid argument: $1"
+            return 1
+            ;;
+    esac
+    
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-power"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_power "$@"; exit 0;;
+    esac
+fi

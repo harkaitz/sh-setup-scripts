@@ -1,0 +1,102 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-posix-manpages ...
+#h:
+#h: Install POSIX manpages for the busybox man(1) command.
+#h:
+#h:   -iG : Install groff(1) in "C:/usr" and create wrappers of nroff
+#h:         and tbl in "C:/Windows/System32".
+#h:   -iP : Download and install POSIX manpages in "C:/usr/share/man".
+#h:   -i  : Install all.
+##:
+wsetup_posix_manpages() {
+    local OPTIND optopt elem= opt_i= opt_G= opt_P=
+    
+    ## Parse command line arguments.
+    while getopts "iGP" optopt; do
+        case $optopt in
+            i)  opt_i=y;;
+            G)  opt_G=y;;
+            P)  opt_P=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    if test ! -n "${opt_G}${opt_P}"; then
+        opt_G=y opt_P=y
+    fi
+    
+    ## Install.
+    if test -n "${opt_i}"; then
+        
+        # Require admin permissions.
+        if test ! -w C:/Windows/System32; then
+            echo >&2 "error: Execute this as administrator."
+            return 1
+        fi
+        
+        # Install components.
+        if test -n "${opt_G}"; then
+            wsetup_groff_install
+        fi
+        if test -n "${opt_P}"; then
+            wsetup_posix_manpages_install
+        fi
+        
+    fi
+    
+    return 0
+}
+## -------------------------------------------------------------------
+wsetup_groff_install() {
+    local idir="C:/usr"
+    local url="http://downloads.sourceforge.net/gnuwin32/groff-1.20.1-bin.zip"
+    local zip="${DDIR:-${TEMP:-/tmp}}/$(basename "${url}")"
+
+    if test ! -e "${idir}/bin/nroff"; then
+        if test ! -e "${zip}"; then
+            wget -O "${zip}.tmp" "${url}"
+            mv -v "${zip}.tmp" "${zip}"
+        fi
+        echo "Installing groff to '${idir}' ..."
+        mkdir -p "${idir}"
+        unzip -o "${zip}" -d "${idir}"
+    fi
+    
+    cat > 'C:/Windows/System32/nroff' <<-EOF
+	#!/bin/sh -e
+	export PATH="C:/usr/bin;\${PATH}"
+	C:/usr/bin/nroff -c -Tascii "\$@"
+	EOF
+    cat > 'C:/Windows/System32/tbl' <<-EOF
+	#!/bin/sh -e
+	export PATH="C:/usr/bin;\${PATH}"
+	C:/usr/bin/tbl.exe "\$@"
+	EOF
+}
+wsetup_posix_manpages_install() {
+    local mandir="C:/usr/share/man" profdir="C:/etc/profile.d"
+    local url="http://deb.debian.org/debian/pool/non-free/m/manpages-posix/manpages-posix_2013a.orig.tar.xz"
+    local tar="${DDIR:-${TEMP:-/tmp}}/$(basename "${url}")"
+    if test ! -e "${tar}"; then
+        wget -O "${tar}.tmp" "${url}"
+        mv -v "${tar}.tmp" "${tar}"
+    fi
+    echo "Installing POSIX manpages to ${mandir} ..."
+    mkdir -p "${mandir}"
+    tar xf "${tar}" -C "${mandir}" --strip-components 1 --overwrite --no-same-permissions \
+        "man-pages-posix-2013-a/man0p" \
+        "man-pages-posix-2013-a/man1p" \
+        "man-pages-posix-2013-a/man3p"
+    mkdir -p "${profdir}"
+    cat > "${profdir}/MANPATH.sh" <<-EOF
+	export MANPATH="C:/usr/share/man"
+	EOF
+}
+## -------------------------------------------------------------------
+if test @"${SCRNAME:-$(basename "$0")}" = @"wsetup-posix-manpages"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            wsetup_posix_manpages "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,28 @@
+#!/bin/sh -e
+##:
+#h: Usage: wsetup-consoleZ -i
+##:
+wsetup_consoleZ() {
+    local d m u i
+    d="${LOCALAPPDATA}/Microsoft/WindowsApps"
+    if test ! -f "${d}/Console.exe"; then
+        m='https://github.com/cbucher/console/releases/download/1.19.0'
+        case "$(uname -sm)" in
+            'Windows_NT x86_64') u="$m/ConsoleZ.x64.1.19.0.19104.zip";;
+            'Windows_NT '*)      u="$m/ConsoleZ.x86.1.19.0.19104.zip";;
+            *) echo >&2 "error: Unsupported platform."; return 1;;
+        esac
+        i="${DDIR:-${TEMP:-/tmp}}/$(basename "$u")"
+        if test ! -f "$i"; then
+            wget -O "$i.tmp" "$u"
+            mv -v "$i.tmp" "$i"
+        fi
+        unzip -o "$i" -d "$d"
+    fi
+}
+if test @"${SCRNAME:-$(basename "$0")}" = @"wsetup-consoleZ"; then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*i*)         wsetup_consoleZ "$@"; exit 0;;
+    esac
+fi

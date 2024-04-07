@@ -1,0 +1,42 @@
+#!/bin/sh -e
+##:
+#h: Usage: INTERACTIVE=1 wsetup-python312 -i
+##:
+wsetup_python312() {
+    local u d i
+    case "$(uname -m)" in
+        x86_64) u="https://www.python.org/ftp/python/3.12.0/python-3.12.0a4-amd64.exe";;
+        *)      u="https://www.python.org/ftp/python/3.12.0/python-3.12.0a4.exe";;
+    esac
+    d="C:/Program Files/Python312"
+    i="${DDIR:-${TEMP:-/tmp}}/$(basename "$u")" p="$(pwd)"
+    
+    if test ! -w C:/Windows/System32; then
+        echo >&2 "error: Execute this as administrator."
+        return 1
+    fi
+    if test -e Z:/bin/sh; then
+        echo >&2 "error: Wine not supported."
+        return 1
+    fi
+    
+    echo "Installing Python 3.12 ..."
+    if test ! -e "$i"; then
+        wget -O "$i.tmp" "$u"
+        mv -v "$i.tmp" "$i"
+    fi
+    echo "Installing Python ..."
+    if test -n "${INTERACTIVE}"; then
+        "${i}" 
+    else
+        "${i}" /quiet InstallAllUsers=1 PrependPath=1
+    fi
+    echo "Restart to have python in path."
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"wsetup-python312";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        -*i*)         wsetup_python312 "$@"; exit 0     ;;
+    esac
+fi
